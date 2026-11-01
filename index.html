@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>숫자 야구 놀이</title>
+<style>
+:root{--bg:#f1f8f1;--card:#fff;--tx:#23302a;--mut:#6f7f76;--ac:#2f9e5b;--gr:#d7e2da;--ok:#1f9d55;--bad:#e03131;--s:#e8590c;--b:#1c7ed6;--hl:#fff3bf;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14201a;--card:#1f2e26;--tx:#eaf3ed;--mut:#9db3a5;--gr:#34493d;--hl:#4a4318}}
+:root[data-theme="dark"]{--bg:#14201a;--card:#1f2e26;--tx:#eaf3ed;--mut:#9db3a5;--gr:#34493d;--hl:#4a4318}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+main{max-width:520px;margin:0 auto;padding:14px 12px 30px}
+h1{font-size:20px;text-align:center;margin:4px 0 10px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tab{flex:1;padding:9px 2px;border:2px solid var(--gr);border-radius:10px;background:var(--card);color:var(--tx);font-size:13px;font-weight:700}
+.tab.on{border-color:var(--ac);color:var(--ac)}
+.card{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.hint{font-size:13px;color:var(--mut);margin:0 0 8px;line-height:1.5}
+.rule{font-size:14px;line-height:1.7;margin:0;padding-left:0;list-style:none}
+.S{color:var(--s);font-weight:800}.B{color:var(--b);font-weight:800}
+.slots{display:flex;gap:8px;justify-content:center;margin:6px 0 10px}
+.slot{width:56px;height:64px;border:2px solid var(--gr);border-radius:12px;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.keys{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.keys button,.btn{padding:12px 0;border:0;border-radius:10px;font-size:18px;font-weight:700;background:var(--gr);color:var(--tx)}
+.keys button:disabled{opacity:.25}
+.row2{display:flex;gap:6px;margin-top:6px}
+.row2 button,.btn{flex:1}
+.btn{font-size:15px;padding:11px 10px}
+.p{background:var(--ac)!important;color:#fff!important}
+.msg{text-align:center;font-weight:700;min-height:22px;margin:4px 0}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.r{border:1px solid var(--gr);border-radius:10px;padding:8px 10px;margin-top:6px}
+.r.win{background:var(--hl)}
+.r1{display:flex;justify-content:space-between;align-items:baseline;font-weight:800}
+.r1 b{font-size:20px;letter-spacing:6px}
+.r2{font-size:13px;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.cnt{display:flex;justify-content:center;gap:6px;margin:6px 0}
+.cnt button{width:44px;height:44px;border-radius:10px;border:2px solid var(--gr);background:var(--bg);color:var(--tx);font-size:18px;font-weight:800}
+.cnt button.on{border-color:var(--ac);background:var(--ac);color:#fff}
+.hl{display:flex;justify-content:space-between;align-items:baseline;padding:5px 4px;border-bottom:1px solid var(--gr);font-size:14px}.hl b{font-size:18px;letter-spacing:4px}.hl.win{background:var(--hl)}
+.lab{text-align:center;font-weight:800;margin-top:8px}
+.big{font-size:34px;font-weight:800;letter-spacing:8px;text-align:center;margin:4px 0}
+</style></head><body><main>
+<h1>⚾ 숫자 야구 놀이</h1>
+<div class="tabs" id="tabs"></div>
+<div id="view"></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const el=h=>{const d=document.createElement("div");d.innerHTML=h.trim();return d.firstElementChild};
+const judge=(sec,g)=>{let s=0,b=0;for(let i=0;i<3;i++){if(g[i]===sec[i])s++;else if(sec.includes(g[i]))b++}return{s,b}};
+const label=r=>r.s===3?"홈런! 🎉":(!r.s&&!r.b)?"아웃":[r.s?r.s+"스트라이크":"",r.b?r.b+"볼":""].filter(Boolean).join(" ");
+const dots=(n,t)=>"●".repeat(n)+"○".repeat(t-n);
+const rnd3=()=>{const d=[0,1,2,3,4,5,6,7,8,9].sort(()=>Math.random()-.5);return d.slice(0,3).join("")};
+function rowHTML(i,g,r){return `<div class="r${r.s===3?" win":""}"><div class="r1"><span>${i}회</span><b>${g}</b><span>${label(r)}</span></div>
+<div class="r2"><span class="S">S ${dots(Math.min(r.s,2),2)}</span><span class="B">B ${dots(r.b,3)}</span><span>아웃 ${!r.s&&!r.b?"●":"○"}</span><span>홈런 ${r.s===3?"●":"○"}</span></div></div>`}
+function pad(host,ok,mask){let v="";host.innerHTML=`<div class="slots"></div><div class="keys"></div><div class="row2"><button class="btn" data-x>⌫ 지우기</button><button class="btn p" data-ok>확인</button></div><div class="msg"></div>`;
+ const sl=host.querySelector(".slots"),ks=host.querySelector(".keys"),mg=host.querySelector(".msg");
+ const paint=()=>{sl.innerHTML=[0,1,2].map(i=>`<div class="slot">${v[i]!==undefined?(mask?"●":v[i]):""}</div>`).join("");[...ks.children].forEach(b=>b.disabled=v.includes(b.textContent)||v.length>=3)};
+ "1234567890".split("").forEach(n=>{const b=document.createElement("button");b.textContent=n;b.onclick=()=>{if(v.length<3&&!v.includes(n)){v+=n;mg.textContent="";paint()}};ks.appendChild(b)});
+ host.querySelector("[data-x]").onclick=()=>{v=v.slice(0,-1);mg.textContent="";paint()};
+ host.querySelector("[data-ok]").onclick=()=>{if(v.length<3){mg.className="msg bad";mg.textContent="서로 다른 숫자 3개를 눌러 주세요";return}const g=v;v="";paint();ok(g,mg)};
+ paint()}
+
+// 탭 순서 변경: 규칙 -> 판정 연습 -> 컴퓨터와 대결 -> 짝과 함께
+const NAMES=["규칙","판정 연습","컴퓨터와 대결","짝과 함께"];
+let tab=0;
+const V=$("#view");
+function render(){
+  const T=$("#tabs");
+  T.innerHTML="";
+  NAMES.forEach((n,i)=>{
+    const b=document.createElement("button");
+    b.className="tab"+(i===tab?" on":"");
+    b.textContent=n;
+    b.onclick=()=>{tab=i;render()};
+    T.appendChild(b);
+  });
+  V.innerHTML="";
+  [rules,practice,vsCom,pair][tab]();
+}
+
+function rules(){V.appendChild(el(`<div class="card"><p class="hint">숫자 야구 놀이의 규칙</p><ol class="rule" style="padding-left:20px">
+<li>서로 다른 숫자 <b>세 자리 수</b>를 정해요. (0도 쓸 수 있어요)</li><li>짝이 말한 숫자와 내가 정한 숫자를 비교해요.</li>
+<li>다음 규칙에 따라 짝에게 말해요.<br><span class="S">▶ 스트라이크(S)</span> : 자리와 숫자가 모두 일치<br><span class="B">▶ 볼(B)</span> : 숫자는 같지만 자리가 달라요<br>▶ <b>아웃(O)</b> : 같은 숫자가 하나도 없어요</li>
+<li>짝과 번갈아 가며 숫자를 맞혀요.</li><li>먼저 숫자를 맞힌(홈런) 사람이 이겨요.</li></ol></div>`));
+ const c=el(`<div class="card"><p class="hint">예시 — 내가 정한 숫자가 <b>287</b>이라면</p></div>`);
+ ["369","672","280","278","287"].forEach((g,i)=>c.insertAdjacentHTML("beforeend",rowHTML(i+1,g,judge("287",g))));V.appendChild(c)}
+
+function practice(){const c=el(`<div class="card"><p class="hint">내가 정한 숫자와 짝이 말한 숫자를 비교해서 스트라이크(S)와 볼(B)이 몇 개인지 골라요.</p><div id="q"></div><div class="msg" id="m"></div><div class="row2"><button class="btn p" id="ck">확인</button><button class="btn" id="nx">다른 문제</button></div><div class="hint" id="sc" style="text-align:center;margin-top:8px"></div></div>`);V.appendChild(c);
+ let sec,g,S,B,ok=0,tot=0;const q=c.querySelector("#q"),m=c.querySelector("#m");
+ const draw=()=>{q.innerHTML=`<div class="lab">내가 정한 숫자</div><div class="big">${sec}</div><div class="lab">짝이 말한 숫자</div><div class="big">${g}</div>
+ <div class="lab S">스트라이크(S)</div><div class="cnt" data-k="S">${[0,1,2,3].map(n=>`<button class="${S===n?"on":""}">${n}</button>`).join("")}</div>
+ <div class="lab B">볼(B)</div><div class="cnt" data-k="B">${[0,1,2,3].map(n=>`<button class="${B===n?"on":""}">${n}</button>`).join("")}</div>`;
+  q.querySelectorAll(".cnt").forEach(w=>w.querySelectorAll("button").forEach((b,n)=>b.onclick=()=>{if(w.dataset.k==="S")S=n;else B=n;m.textContent="";draw()}))};
+ const nu=()=>{do{sec=rnd3();g=Math.random()<.3?(sec[0]+sec[1]+sec[2]).split("").sort(()=>Math.random()-.5).join(""):rnd3()}while(g===sec&&Math.random()<.8);S=B=undefined;m.textContent="";draw()};
+ c.querySelector("#nx").onclick=nu;
+ c.querySelector("#ck").onclick=()=>{if(S===undefined||B===undefined){m.className="msg bad";m.textContent="S와 B를 모두 골라 주세요";return}
+  const r=judge(sec,g);tot++;if(r.s===S&&r.b===B){ok++;m.className="msg ok";m.textContent="🎉 정답! "+label(r)}else{m.className="msg bad";m.textContent=`정답은 S ${r.s}개, B ${r.b}개 (${label(r)})`}
+  c.querySelector("#sc").textContent=`맞힌 문제 ${ok} / ${tot}`};
+ nu()}
+
+function vsCom(){const c=el(`<div class="card"><p class="hint">컴퓨터가 정한 숫자를 9회 안에 맞혀 보세요!</p><div class="lab" id="st"></div><div id="pd"></div><div id="bd"></div></div>`);V.appendChild(c);
+ let sec,rows;const st=c.querySelector("#st"),bd=c.querySelector("#bd"),pd=c.querySelector("#pd");
+ const start=()=>{sec=rnd3();rows=[];bd.innerHTML="";st.textContent="1회 — 숫자를 말해 보세요";pad(pd,go)};
+ const go=(g,mg)=>{const r=judge(sec,g);rows.push(r);bd.insertAdjacentHTML("afterbegin",rowHTML(rows.length,g,r));
+  if(r.s===3||rows.length>=9){const w=r.s===3;pd.innerHTML=`<div class="msg ${w?"ok":"bad"}">${w?`🎉 ${rows.length}회 만에 홈런! 승리!`:"😢 9회가 끝났어요. 컴퓨터의 숫자는"}</div>${w?"":`<div class="big">${sec}</div>`}<div class="row2"><button class="btn p" id="again">다시 하기</button></div>`;st.textContent="";pd.querySelector("#again").onclick=start}
+  else st.textContent=`${rows.length+1}회 — 숫자를 말해 보세요`};
+ start()}
+
+function pair(){const c=el(`<div class="card"><div class="lab" id="st"></div><p class="hint" id="hn" style="text-align:center"></p><div id="bd"></div><div id="pd"></div></div>`);V.appendChild(c);
+ const st=c.querySelector("#st"),hn=c.querySelector("#hn"),pd=c.querySelector("#pd"),bd=c.querySelector("#bd");let sec,rows,turn,hit0=false;
+ const hist=p=>rows[p].length?rows[p].map(([g,r],i)=>`<div class="hl${r.s===3?" win":""}"><span>${i+1}회</span><b>${g}</b><span>${label(r)}</span></div>`).reverse().join(""):`<div class="hint" style="margin:0">아직 없어요</div>`;
+ const hand=(t,h,btn,next)=>{st.textContent=t;hn.textContent=h;bd.innerHTML="";pd.innerHTML=`<div class="row2"><button class="btn p" id="go">${btn}</button></div>`;pd.querySelector("#go").onclick=next};
+ const setN=p=>{st.textContent=`친구 ${p+1}의 숫자 정하기`;hn.textContent=`친구 ${2-p}는 화면을 보지 마세요! 숫자는 ●로 가려져요.`;bd.innerHTML="";pad(pd,g=>{sec[p]=g;if(p===0)hand("✅ 친구 1의 숫자가 정해졌어요","친구 2에게 기기를 넘겨 주세요","친구 2 준비됐어요",()=>setN(1));else hand("✅ 둘 다 숫자를 정했어요","친구 1에게 기기를 넘기고 시작해요","게임 시작!",()=>{turn=0;play()})},true)};
+ const play=()=>{st.textContent=`${rows[turn].length+1}회 — 친구 ${turn+1} 차례`;hn.textContent=hit0&&turn===1?"친구 1이 홈런을 쳤어요! 같은 회 마지막 기회예요":`친구 ${2-turn}가 정한 숫자를 맞혀 보세요`;
+  bd.innerHTML=`<p class="hint" style="margin:0 0 4px"><b>친구 ${turn+1}</b>의 기록</p>`+hist(turn);
+  pad(pd,g=>{const r=judge(sec[1-turn],g);rows[turn].push([g,r]);
+if(turn===1){
+    if(r.s===3)return hit0?fin("둘 다 홈런! 무승부 🤝","bad"):fin("🎉 친구 2 승리! 홈런!","ok");
+    if(rows[1].length>=9){
+        if(hit0)return fin("🎉 친구 1 승리! 홈런!","ok");
+        return fin("9회가 끝났어요! 무승부 🤝","bad");
+    }
+}else if(r.s===3)hit0=true;
+   st.textContent=`친구 ${turn+1}의 결과`;hn.textContent="";bd.innerHTML=`<div class="big" style="letter-spacing:0;font-size:28px">${label(r)}</div>`+rowHTML(rows[turn].length,g,r);
+   pd.innerHTML=`<div class="row2"><button class="btn p" id="go">친구 ${2-turn}에게 넘기기${hit0&&turn===0?" (같은 회 마지막 기회!)":""}</button></div>`;pd.querySelector("#go").onclick=()=>{turn=1-turn;play()}})};
+ const fin=(m,k)=>{st.textContent="";hn.textContent="";bd.innerHTML=`<div class="msg ${k}" style="font-size:18px">${m}</div><p class="hint" style="text-align:center">친구 1의 숫자 <b>${sec[0]}</b> · 친구 2의 숫자 <b>${sec[1]}</b></p><p class="hint" style="margin:8px 0 2px"><b>친구 1</b>의 기록</p>${hist(0)}<p class="hint" style="margin:8px 0 2px"><b>친구 2</b>의 기록</p>${hist(1)}`;
+  pd.innerHTML=`<div class="row2"><button class="btn p" id="again">다시 하기</button></div>`;pd.querySelector("#again").onclick=init};
+ const init=()=>{sec=["",""];rows=[[],[]];hit0=false;setN(0)};init()}
+
+render();
+</script></body></html>
